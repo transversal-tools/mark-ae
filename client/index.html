@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Mark</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="mark.css" />
+</head>
+<body>
+    <!-- Mark UI v2. Every id the original AE Portal code (main.js) reads is kept;
+         those pieces now live in the Bridge tab. Mark's own ids start with mark-. -->
+    <header class="mk-top">
+        <nav class="mk-tabs" role="tablist">
+            <button class="mk-tab" role="tab" data-tab="chat" aria-selected="true">Chat</button>
+            <button class="mk-tab" role="tab" data-tab="recipes" aria-selected="false">Recipes<span class="mk-n" id="mark-recipe-count"></span></button>
+            <button class="mk-tab" role="tab" data-tab="bridge" aria-selected="false"><span class="mk-conn" id="mark-conn"><span class="dot" id="conn-dot"></span><span id="mark-conn-label">AE</span></span>Bridge</button>
+            <button class="mk-tab" role="tab" data-tab="log" aria-selected="false">Log<span class="mk-n err" id="mark-activity-n"></span></button>
+        </nav>
+        <button class="mk-new" id="mark-new" title="Start a new chat"><svg viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg><span>New chat</span></button>
+        <button class="mk-ibtn" id="reload-btn" title="Reload Mark (no need to restart AE)"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 3v3h-3"/></svg></button>
+    </header>
+
+    <!-- CHAT -->
+    <section class="mk-view mk-on" id="mark-chat">
+        <div class="mk-log" id="mark-log"></div>
+        <div class="mk-grip" id="mark-grip" role="separator" aria-orientation="horizontal" title="Drag to resize the text box. Double-click to reset."></div>
+        <div class="mk-dock">
+            <div class="mk-pop" id="mark-pop" role="dialog" aria-label="How Claude answers">
+                <div>
+                    <h3>Account</h3>
+                    <div class="mk-seg" id="mark-mode-seg">
+                        <button data-v="subscription">Subscription</button>
+                        <button data-v="api">API credits</button>
+                    </div>
+                </div>
+                <div class="mk-key" id="mark-key" hidden>
+                    <div class="mk-keyrow">
+                        <input type="password" id="mark-key-input" placeholder="Paste your API key (sk-ant-...)" autocomplete="off" />
+                        <button class="mk-btn" id="mark-key-save">Save</button>
+                    </div>
+                    <div class="mk-hint"><span id="mark-key-status"></span> <button class="mk-link" id="mark-key-del" hidden>Delete key</button></div>
+                </div>
+                <div>
+                    <h3>Model</h3>
+                    <div class="mk-opts" id="mark-model-opts">
+                        <button class="mk-opt" data-v="opus"><span class="mk-oname">Opus</span><span class="mk-odesc">hard requests</span></button>
+                        <button class="mk-opt" data-v="sonnet"><span class="mk-oname">Sonnet</span><span class="mk-odesc">everyday work</span></button>
+                        <button class="mk-opt" data-v="haiku"><span class="mk-oname">Haiku</span><span class="mk-odesc">simple tasks, cheapest</span></button>
+                    </div>
+                </div>
+                <div>
+                    <h3>Effort</h3>
+                    <div class="mk-seg" id="mark-effort-seg">
+                        <button data-v="low">Low</button>
+                        <button data-v="medium">Medium</button>
+                        <button data-v="high">High</button>
+                        <button data-v="max">Max</button>
+                    </div>
+                    <div class="mk-hint">More effort thinks longer before acting, and costs more.</div>
+                </div>
+            </div>
+            <div class="mk-composer">
+                <textarea id="mark-input" rows="1" placeholder="Describe what to change"></textarea>
+                <div class="mk-crow">
+                    <button class="mk-cfg" id="mark-cfg" aria-haspopup="dialog"><span id="mark-cfg-label">Sonnet, medium</span>
+                        <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1.5 3l2.5 2.5L6.5 3"/></svg></button>
+                    <span class="mk-spend" id="mark-spend"></span>
+                    <button class="mk-send" id="mark-send" title="Send (Enter)" disabled></button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RECIPES -->
+    <section class="mk-view" id="mark-recipes">
+        <input class="mk-rsearch" id="mark-rsearch" type="search" placeholder="Search recipes" hidden />
+        <div class="mk-rlist" id="mark-rlist"></div>
+        <div class="mk-rfoot">Recipes run straight in AE on your current selection, with no AI and no cost. One Ctrl+Z undoes them.</div>
+    </section>
+
+    <!-- BRIDGE: the original AE Portal controls, restyled -->
+    <!-- LOG: every call from every session (client/mark-activity.js) -->
+    <section class="mk-view" id="mark-activity">
+        <div class="mk-a-who" id="mk-a-who">
+            <button class="mk-a-who-h" id="mk-a-who-toggle"><b>Connected</b><span id="mk-a-who-sum"></span><span class="chev">▾</span></button>
+            <ul class="mk-a-clients" id="mk-a-clients"></ul>
+        </div>
+        <div class="mk-a-bar">
+            <select id="mk-a-filter" aria-label="Show calls from"></select>
+            <label class="mk-a-chk"><input type="checkbox" id="mk-a-err-only"> Errors only</label>
+            <label class="mk-a-chk"><input type="checkbox" id="mk-a-sys" checked> Panel events</label>
+        </div>
+        <div class="mk-a-log" id="mk-a-log"></div>
+        <div class="mk-a-foot">
+            <button class="mini" id="mk-a-copy-errors">Copy errors</button>
+            <button class="mini" id="mk-a-clear">Clear</button>
+            <span class="cnt" id="mk-a-count"></span>
+        </div>
+    </section>
+
+    <section class="mk-view" id="mark-bridge">
+        <div class="mk-bridge">
+            <div class="mk-facts" id="status-panel">
+                <div class="row"><span class="k">After Effects</span><span class="v" id="s-ae">—</span></div>
+                <div class="row"><span class="k">Project</span><span class="v" id="s-project">—</span></div>
+                <div class="row"><span class="k">AI clients</span><span class="v" id="s-clients">0</span></div>
+                <div class="row"><span class="k">Last command</span><span class="v" id="s-last">idle</span></div>
+                <div class="row"><span class="k">Port</span><span class="v" id="s-port">—</span></div>
+                <div class="row"><span class="k">Backup</span><span class="v" id="mark-backup">—</span></div>
+                <div class="row"><span class="k">Built on</span><span class="v">AE Portal <span id="version-tag">—</span> by Ricardo G. Mendes</span></div>
+            </div>
+
+            <div class="mk-group">
+                <h3>Memory</h3>
+                <p>What Mark remembers about you in every chat. Say “remember that…” in the chat, or edit it here. Keep it short: it is read with every message.</p>
+                <textarea class="mk-mem" id="mark-mem" rows="5" spellcheck="false"></textarea>
+                <div class="mk-memrow"><button class="mk-btn" id="mark-mem-save" disabled>Save</button><span class="mk-hint" id="mark-mem-info"></span></div>
+            </div>
+
+            <div class="mk-group">
+                <h3>Learning mode</h3>
+                <p>When on, Mark saves AE fixes and approaches you confirm into the Portal knowledge base, and looks them up next time.</p>
+                <button class="mk-switch" id="mark-learn-btn" role="switch" aria-checked="false"><span class="mk-sw"></span><span id="mark-learn-label">Learning off</span></button>
+                <div class="mk-hint"><span id="mark-learn-info"></span> <button class="mk-link" id="mark-lessons-btn" hidden>Show</button></div>
+                <ul class="mk-lessons" id="mark-lessons" hidden></ul>
+            </div>
+
+            <div class="mk-group">
+                <h3>One Ctrl+Z per answer <span class="mk-sub">beta</span></h3>
+                <p>Groups everything Mark changes in one answer into a single undo step. Not tested inside AE yet. While it is on, anything you change by hand during an answer joins that step.</p>
+                <button class="mk-switch" id="mark-undo-btn" role="switch" aria-checked="false"><span class="mk-sw"></span><span id="mark-undo-label">Off</span></button>
+            </div>
+
+            <div class="mk-group">
+                <h3>Record my changes</h3>
+                <p>Logs every change you make by hand in AE, so it can become a recipe or a tool later.</p>
+                <button class="mk-switch" id="watch-btn" role="switch" aria-checked="false"><span class="mk-sw"></span><span id="mark-watch-label">Recording off</span></button>
+                <section class="watch-log hidden" id="watch-pane">
+                    <div class="watch-hdr">
+                        <span class="watch-title">Recorded <span id="watch-count" class="watch-count"></span></span>
+                        <div class="console-actions">
+                            <button id="watch-copy-mcp" class="mini" title="Copy the log as MCP tool calls">copy as MCP</button>
+                            <button id="watch-clear-btn" class="mini" title="Clear the log">clear</button>
+                        </div>
+                    </div>
+                    <div id="watch-entries"></div>
+                </section>
+            </div>
+
+            <section class="manual collapsed" id="manual-pane">
+                <button class="manual-hdr" id="manual-toggle" title="Run a Portal command by hand">
+                    <span class="caret">▸</span><span>Manual command</span><span class="mk-sub">for when the chat is not answering</span>
+                </button>
+                <div class="manual-body">
+                    <div class="cmd">
+                        <div class="cmd-row">
+                            <input type="text" id="cmd-input" placeholder='method [json-args], e.g. ping' />
+                            <button id="cmd-run">Run</button>
+                        </div>
+                        <div class="cmd-shortcuts">
+                            <button data-cmd="ping">ping</button>
+                            <button data-cmd='get_project_map {"mode":"light"}'>map (light)</button>
+                            <button data-cmd="reload_host">reload host</button>
+                        </div>
+                    </div>
+                    <div class="result">
+                        <div class="result-hdr">
+                            <span>Result</span>
+                            <button class="mini" id="copy-result" title="Copy">copy</button>
+                        </div>
+                        <pre id="result-pane">—</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- The old console: main.js still writes here; the Log tab shows it now. -->
+            <details class="mk-details" hidden>
+                <summary>Console <span class="mk-sub" id="mark-console-sum"></span></summary>
+                <section class="console">
+                    <div class="console-hdr">
+                        <span></span>
+                        <div class="console-actions">
+                            <button id="console-copy-errors" class="mini" title="Copy every error and warning line">copy errors</button>
+                            <button id="console-clear" class="mini" title="Clear the console">clear</button>
+                        </div>
+                    </div>
+                    <div id="console-log"></div>
+                </section>
+            </details>
+
+            <details class="mk-details">
+                <summary>Settings <span class="mk-sub">port, project map, server</span></summary>
+                <section class="settings" id="settings-pane">
+                    <label class="inline"><input type="checkbox" id="cfg-auto-port" checked /> Pick the port from the AE version</label>
+                    <label>Port <input type="number" id="cfg-port" value="38967" /></label>
+                    <label>Map the project on open
+                        <select id="cfg-automap">
+                            <option value="off">off</option>
+                            <option value="light" selected>light</option>
+                            <option value="deep">deep</option>
+                        </select>
+                    </label>
+                    <label class="stacked">MCP server path
+                        <span class="path-row">
+                            <input type="text" id="cfg-server-path" readonly />
+                            <button class="mini" id="copy-server-path" title="Copy path">copy</button>
+                        </span>
+                    </label>
+                    <button id="restart-btn">Restart server</button>
+                </section>
+            </details>
+            <!-- main.js expects a settings button; settings now live in the section above -->
+            <button id="settings-btn" hidden></button>
+        </div>
+    </section>
+
+    <script>
+        // Inline early error overlay — runs BEFORE any module load,
+        // so we can see require() / parse errors without DevTools.
+        window.addEventListener('error', function (e) {
+            var msg = (e && e.message) || 'unknown error';
+            var src = (e && e.filename ? (e.filename + ':' + (e.lineno||'?') + ':' + (e.colno||'?')) : '');
+            var stk = (e && e.error && e.error.stack) || '';
+            showFatal('JS ERROR\n\n' + msg + '\n\n' + src + '\n\n' + stk);
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+            var r = e && e.reason;
+            var msg = (r && r.message) || String(r);
+            var stk = (r && r.stack) || '';
+            showFatal('UNHANDLED PROMISE REJECTION\n\n' + msg + '\n\n' + stk);
+        });
+        function showFatal(text) {
+            var d = document.getElementById('fatal-error');
+            if (!d) {
+                d = document.createElement('div');
+                d.id = 'fatal-error';
+                d.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#1a0000;color:#ffb0b0;padding:14px;font-family:Menlo,monospace;font-size:11px;white-space:pre-wrap;overflow:auto;user-select:text;';
+                document.body.appendChild(d);
+            }
+            d.textContent = (d.textContent ? d.textContent + '\n\n---\n\n' : '') + text;
+        }
+        // Sanity: if main.js silently never runs, this still shows
+        setTimeout(function () {
+            if (!window.__aePortalBooted) {
+                showFatal('BOOTSTRAP NEVER RAN\n\nmain.js did not set window.__aePortalBooted within 4s.\nLikely a parse error or a require() that never resolved.');
+            }
+        }, 4000);
+    </script>
+    <script src="CSInterface.js"></script>
+    <script src="responsive.js"></script>
+    <script src="main.js"></script>
+    <script src="mark-activity.js"></script>
+    <script src="mark-chat.js"></script>
+</body>
+</html>

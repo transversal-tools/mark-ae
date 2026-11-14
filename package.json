@@ -1,0 +1,32 @@
+{
+  "name": "mark",
+  "version": "0.3.0",
+  "description": "Mark: an After Effects panel with a built-in chat and an MCP server that lets Claude Code, Codex and other MCP clients drive After Effects. Based on AE Portal. Zero dependencies.",
+  "license": "MIT",
+  "author": "Transversal Tools",
+  "private": false,
+  "keywords": [
+    "after-effects",
+    "mcp",
+    "motion-design",
+    "extendscript",
+    "cep"
+  ],
+  "bin": {
+    "mark": "./mcp-server/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node mcp-server/server.js",
+    "install-mac": "./install-mac.sh"
+  },
+  "contributors": [
+    "Ricardo G. Mendes / SphereLab (AE Portal)"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/transversal-tools/mark-ae.git"
+  }
+}
